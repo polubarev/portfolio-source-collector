@@ -54,5 +54,71 @@ class BinanceAdapter(BrokerAdapter):
         return balances
 
     def fetch_positions(self) -> Sequence[Position]:
-        # TODO: implement position retrieval (e.g., /api/v3/account includes balances only).
-        return []
+        positions: list[Position] = []
+
+        # Spot balances as positions proxy.
+        data = self._signed_get("/api/v3/account")
+        for entry in data.get("balances", []):
+            free = float(entry.get("free", 0))
+            locked = float(entry.get("locked", 0))
+            total = free + locked
+            if total == 0:
+                continue
+            positions.append(
+                Position(
+                    broker=Broker.BINANCE,
+                    symbol=entry.get("asset", ""),
+                    quantity=total,
+                    average_price=None,
+                    currency=entry.get("asset", ""),
+                )
+            )
+
+        # Simple Earn flexible/locked positions if available.
+        positions.extend(self._fetch_simple_earn_positions())
+
+        # Aggregate by symbol to avoid duplicates from spot + earn.
+        aggregated: dict[str, float] = {}
+        for pos in positions:
+            key = pos.symbol
+            aggregated[key] = aggregated.get(key, 0.0) + pos.quantity
+
+        return [
+            Position(
+                broker=Broker.BINANCE,
+                symbol=symbol,
+                quantity=qty,
+                average_price=None,
+                currency=symbol,
+            )
+            for symbol, qty in aggregated.items()
+            if qty != 0
+        ]
+
+    def _fetch_simple_earn_positions(self) -> list[Position]:
+        earn_positions: list[Position] = []
+        endpoints = [
+            "/sapi/v1/simple-earn/flexible/position",
+            "/sapi/v1/simple-earn/locked/position",
+        ]
+        for endpoint in endpoints:
+            try:
+                data = self._signed_get(endpoint)
+            except Exception as exc:  # pragma: no cover - defensive; log and continue
+                # Avoid failing whole adapter if earn endpoints are unavailable.
+                continue
+            for item in data.get("rows", []):
+                asset = item.get("asset") or item.get("collateralCoin") or ""
+                total = float(item.get("totalAmount", 0) or item.get("amount", 0) or 0)
+                if total == 0:
+                    continue
+                earn_positions.append(
+                    Position(
+                        broker=Broker.BINANCE,
+                        symbol=asset,
+                        quantity=total,
+                        average_price=None,
+                        currency=asset,
+                    )
+                )
+        return earn_positions

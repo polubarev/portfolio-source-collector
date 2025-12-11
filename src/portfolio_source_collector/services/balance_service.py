@@ -14,7 +14,7 @@ from portfolio_source_collector.adapters import (
 from portfolio_source_collector.core.errors import BrokerError
 from portfolio_source_collector.core.config import Settings, get_settings
 from portfolio_source_collector.core.logging import configure_logging
-from portfolio_source_collector.models import Balance
+from portfolio_source_collector.models import Balance, Position
 
 logger = configure_logging(logger_name=__name__)
 
@@ -62,3 +62,16 @@ class BalanceService:
             except Exception as exc:  # pragma: no cover - defensive
                 logger.exception("Unexpected error in adapter %s: %s", adapter.__class__.__name__, exc)
         return balances
+
+    def fetch_positions(self) -> list[Position]:
+        positions: list[Position] = []
+        for adapter in self._adapters:
+            try:
+                positions.extend(adapter.fetch_positions())
+            except (BrokerError, httpx.HTTPError) as exc:
+                logger.warning("Adapter %s positions failed: %s", adapter.__class__.__name__, exc)
+            except Exception as exc:  # pragma: no cover - defensive
+                logger.exception(
+                    "Unexpected error in adapter %s positions: %s", adapter.__class__.__name__, exc
+                )
+        return positions

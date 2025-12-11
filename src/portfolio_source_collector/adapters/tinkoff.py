@@ -18,6 +18,11 @@ def _money_to_float(amount: dict) -> float:
     nano = float(amount.get("nano", 0)) / 1_000_000_000
     return units + nano
 
+def _quantity_to_float(quantity: dict) -> float:
+    units = float(quantity.get("units", 0))
+    nano = float(quantity.get("nano", 0)) / 1_000_000_000
+    return units + nano
+
 
 class TinkoffAdapter(BrokerAdapter):
     def __init__(self, config: TinkoffConfig, client: httpx.Client | None = None) -> None:
@@ -80,6 +85,32 @@ class TinkoffAdapter(BrokerAdapter):
         return balances
 
     def fetch_positions(self) -> Sequence[Position]:
-        # TODO: implement positions via GetPositions securities and futures blocks.
-        logger.info("Tinkoff positions not implemented yet.")
-        return []
+        positions: list[Position] = []
+        account_ids = self._account_ids()
+        if not account_ids:
+            logger.info("No Tinkoff accounts found; skipping positions.")
+            return positions
+
+        for account_id in account_ids:
+            data = self._post(
+                "/tinkoff.public.invest.api.contract.v1.OperationsService/GetPositions",
+                payload={"accountId": account_id},
+            )
+            for security in data.get("securities", []):
+                qty = _quantity_to_float(security.get("quantity", {}))
+                if qty == 0:
+                    continue
+                avg_price = None
+                price = security.get("averagePositionPrice") or security.get("averagePositionPricePt")
+                if price:
+                    avg_price = _money_to_float(price)
+                positions.append(
+                    Position(
+                        broker=Broker.TINKOFF,
+                        symbol=security.get("figi", "") or security.get("instrumentType", ""),
+                        quantity=qty,
+                        average_price=avg_price,
+                        currency=security.get("averagePositionPrice", {}).get("currency", None),
+                    )
+                )
+        return positions

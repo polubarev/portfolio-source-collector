@@ -30,7 +30,7 @@ Fetch balances across multiple brokers (Tinkoff Investments, Bybit, Binance, Int
    ```
 
 ## Implementation Notes
-- Binance and Bybit adapters include signing and wallet balance normalization; positions are still TODO. Tinkoff uses `GetPositions` money block; IBKR uses the socket API (TWS/IB Gateway) to fetch TotalCashValue (ensure TWS/Gateway is running and logged in).
+- Binance and Bybit adapters include signing and wallet balance normalization; positions include wallet holdings, and Binance also pulls Simple Earn positions (flexible/locked) when available. Tinkoff uses `GetPositions` money block; IBKR uses the socket API (TWS/IB Gateway) to fetch cash and positions (ensure TWS/Gateway is running and logged in).
 - Adapters normalize into the shared `Balance` model with currency codes and amounts.
 - Add per-broker rate limiting/backoff in `core/http.py` and extend error handling for throttling/auth failures.
 - Prefer not to log secrets; centralize signing/auth in each adapter.

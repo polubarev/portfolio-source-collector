@@ -80,6 +80,7 @@ class Settings(BaseModel):
     bybit: BybitConfig = Field(default_factory=BybitConfig)
     tinkoff: TinkoffConfig = Field(default_factory=TinkoffConfig)
     ibkr: IBKRConfig = Field(default_factory=IBKRConfig)
+    fx_rates: dict[str, float] = Field(default_factory=dict)
 
     model_config = {
         "populate_by_name": True,
@@ -103,6 +104,21 @@ def get_settings() -> Settings:
             return int(env_value)
         except ValueError:
             return None
+
+    def _parse_fx_rates(raw: str | None) -> dict[str, float]:
+        rates: dict[str, float] = {}
+        if not raw:
+            return rates
+        parts = [p.strip() for p in raw.split(",") if p.strip()]
+        for part in parts:
+            if "=" not in part:
+                continue
+            k, v = part.split("=", 1)
+            try:
+                rates[k.strip().upper()] = float(v.strip())
+            except ValueError:
+                continue
+        return rates
 
     return Settings(
         base_currency=os.getenv("BASE_CURRENCY", "USD"),
@@ -132,4 +148,5 @@ def get_settings() -> Settings:
             ibapi_path=os.getenv("IBKR_API_PATH"),
             verify_ssl=os.getenv("IBKR_VERIFY_SSL", "true").lower() not in {"0", "false", "no"},
         ),
+        fx_rates=_parse_fx_rates(os.getenv("FX_RATES")),
     )

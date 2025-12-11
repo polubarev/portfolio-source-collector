@@ -71,5 +71,30 @@ class BybitAdapter(BrokerAdapter):
         return balances
 
     def fetch_positions(self) -> Sequence[Position]:
-        # TODO: implement position retrieval via /v5/position/list.
-        return []
+        # Use wallet coins as positions proxy, including equity (captures earn/locked amounts).
+        data = self._get("/v5/account/wallet-balance", params={"accountType": "UNIFIED"})
+        positions: list[Position] = []
+        result = data.get("result", {})
+        for account in result.get("list", []):
+            for coin in account.get("coin", []):
+                try:
+                    wallet_qty = float(coin.get("walletBalance", 0))
+                except (TypeError, ValueError):
+                    wallet_qty = 0.0
+                try:
+                    equity_qty = float(coin.get("equity", 0))
+                except (TypeError, ValueError):
+                    equity_qty = 0.0
+                qty = max(wallet_qty, equity_qty)
+                if qty == 0:
+                    continue
+                positions.append(
+                    Position(
+                        broker=Broker.BYBIT,
+                        symbol=coin.get("coin", ""),
+                        quantity=qty,
+                        average_price=None,
+                        currency=coin.get("coin", "USD"),
+                    )
+                )
+        return positions
