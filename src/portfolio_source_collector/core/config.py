@@ -53,15 +53,16 @@ class TinkoffConfig(BaseModel):
 
 
 class IBKRConfig(BaseModel):
-    client_id: Optional[str] = None
-    client_secret: Optional[str] = None
-    base_url: str = "https://"
+    host: Optional[str] = None
+    port: Optional[int] = None
+    client_id: Optional[int] = None
     account_id: Optional[str] = None
     account_ids: list[str] = Field(default_factory=list)
-    verify_ssl: bool = True
+    ibapi_path: Optional[str] = None
+    verify_ssl: bool = True  # retained for backwards compatibility; unused in socket mode.
 
     def is_configured(self) -> bool:
-        return bool(self.client_id and self.client_secret and self.base_url and self.base_url != "https://")
+        return bool(self.host and self.port is not None and self.client_id is not None)
 
     @field_validator("account_ids", mode="before")
     @classmethod
@@ -94,6 +95,15 @@ class Settings(BaseModel):
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     load_dotenv(dotenv_path=ENV_PATH, override=False)
+
+    def _to_int(env_value: str | None) -> int | None:
+        if env_value is None:
+            return None
+        try:
+            return int(env_value)
+        except ValueError:
+            return None
+
     return Settings(
         base_currency=os.getenv("BASE_CURRENCY", "USD"),
         binance=BinanceConfig(
@@ -114,11 +124,12 @@ def get_settings() -> Settings:
             account_ids=os.getenv("TINKOFF_ACCOUNT_IDS"),
         ),
         ibkr=IBKRConfig(
-            client_id=os.getenv("IBKR_CLIENT_ID"),
-            client_secret=os.getenv("IBKR_CLIENT_SECRET"),
-            base_url=os.getenv("IBKR_BASE_URL", IBKRConfig().base_url),
+            host=os.getenv("IBKR_HOST"),
+            port=_to_int(os.getenv("IBKR_PORT")),
+            client_id=_to_int(os.getenv("IBKR_CLIENT_ID")),
             account_id=os.getenv("IBKR_ACCOUNT_ID"),
             account_ids=os.getenv("IBKR_ACCOUNT_IDS"),
+            ibapi_path=os.getenv("IBKR_API_PATH"),
             verify_ssl=os.getenv("IBKR_VERIFY_SSL", "true").lower() not in {"0", "false", "no"},
         ),
     )

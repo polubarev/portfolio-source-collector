@@ -34,3 +34,4 @@ htmlcov/
 # OS-specific
 .DS_Store
 .ipynb_checkpoints/
+/twsapi_macunix.1037.02/

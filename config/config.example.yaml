@@ -8,10 +8,11 @@ brokers:
     api_secret: "${BINANCE_API_SECRET}"
     base_url: "${BINANCE_BASE_URL:-https://api.binance.com}"
   interactive_brokers:
-    client_id: "${IBKR_CLIENT_ID}"
-    client_secret: "${IBKR_CLIENT_SECRET}"
-    base_url: "${IBKR_BASE_URL}"
+    host: "${IBKR_HOST:-127.0.0.1}"
+    port: ${IBKR_PORT:-7497}
+    client_id: ${IBKR_CLIENT_ID:-1}
     verify_ssl: ${IBKR_VERIFY_SSL:-true}
+    ibapi_path: "${IBKR_API_PATH:-}"
     account_id: "${IBKR_ACCOUNT_ID:-}"
     account_ids: "${IBKR_ACCOUNT_IDS:-}"
   tinkoff:

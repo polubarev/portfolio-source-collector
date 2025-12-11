@@ -23,14 +23,14 @@ Fetch balances across multiple brokers (Tinkoff Investments, Bybit, Binance, Int
    - `TINKOFF_ACCOUNT_ID` or `TINKOFF_ACCOUNT_IDS` (comma-separated) if you want to target specific accounts.
    - `BYBIT_API_KEY`, `BYBIT_API_SECRET`
    - `BINANCE_API_KEY`, `BINANCE_API_SECRET`
-   - `IBKR_CLIENT_ID`, `IBKR_CLIENT_SECRET`, `IBKR_BASE_URL` (point to your Client Portal Gateway, e.g., `https://localhost:5000`), optional `IBKR_ACCOUNT_ID`/`IBKR_ACCOUNT_IDS`
+   - `IBKR_HOST` (default `127.0.0.1`), `IBKR_PORT` (e.g., `7497` for paper), `IBKR_CLIENT_ID`, optional `IBKR_ACCOUNT_ID`/`IBKR_ACCOUNT_IDS` (IB socket API), `IBKR_API_PATH` if ibapi isn’t installed system-wide.
 4. Run the CLI:
    ```bash
    portfolio-balances --help
    ```
 
 ## Implementation Notes
-- Binance and Bybit adapters include signing and wallet balance normalization; positions are still TODO. Tinkoff uses `GetPositions` money block; IBKR uses the Client Portal Gateway ledger endpoint (gateway must be running and authenticated).
+- Binance and Bybit adapters include signing and wallet balance normalization; positions are still TODO. Tinkoff uses `GetPositions` money block; IBKR uses the socket API (TWS/IB Gateway) to fetch TotalCashValue (ensure TWS/Gateway is running and logged in).
 - Adapters normalize into the shared `Balance` model with currency codes and amounts.
 - Add per-broker rate limiting/backoff in `core/http.py` and extend error handling for throttling/auth failures.
 - Prefer not to log secrets; centralize signing/auth in each adapter.
