@@ -29,6 +29,15 @@ Fetch balances across multiple brokers (Tinkoff Investments, Bybit, Binance, Int
    portfolio-balances --help
    ```
 
+### Interactive Brokers (ibapi) setup
+- Download the IB API bundle (e.g., `twsapi_macunix.1037.02.zip`) from IBKR and unzip it in the repo root (already present in this repo).
+- Install the python client into your venv:
+  ```bash
+  pip install twsapi_macunix.1037.02/IBJts/source/pythonclient
+  ```
+  or set `IBKR_API_PATH` in `.env` to point to `.../twsapi_macunix.1037.02/IBJts/source/pythonclient` so the adapter can import `ibapi` without installation.
+- Ensure TWS or IB Gateway is running, API is enabled, and ports/clientId match your `.env` (`IBKR_HOST`, `IBKR_PORT`, `IBKR_CLIENT_ID`).
+
 ## Implementation Notes
 - Binance and Bybit adapters include signing and wallet balance normalization; positions include wallet holdings, and Binance also pulls Simple Earn positions (flexible/locked) when available. Tinkoff uses `GetPositions` money block; IBKR uses the socket API (TWS/IB Gateway) to fetch cash and positions (ensure TWS/Gateway is running and logged in).
 - Adapters normalize into the shared `Balance` model with currency codes and amounts.
