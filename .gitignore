@@ -25,6 +25,7 @@ htmlcov/
 # Environment / local config
 .env
 .env.*
+!.env.example
 
 # Editor / IDE
 .idea/

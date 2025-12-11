@@ -1,0 +1,23 @@
+brokers:
+  bybit:
+    api_key: "${BYBIT_API_KEY}"
+    api_secret: "${BYBIT_API_SECRET}"
+    base_url: "${BYBIT_BASE_URL:-https://api.bybit.com}"
+  binance:
+    api_key: "${BINANCE_API_KEY}"
+    api_secret: "${BINANCE_API_SECRET}"
+    base_url: "${BINANCE_BASE_URL:-https://api.binance.com}"
+  interactive_brokers:
+    client_id: "${IBKR_CLIENT_ID}"
+    client_secret: "${IBKR_CLIENT_SECRET}"
+    base_url: "${IBKR_BASE_URL}"
+    verify_ssl: ${IBKR_VERIFY_SSL:-true}
+    account_id: "${IBKR_ACCOUNT_ID:-}"
+    account_ids: "${IBKR_ACCOUNT_IDS:-}"
+  tinkoff:
+    token: "${TINKOFF_TOKEN}"
+    base_url: "${TINKOFF_BASE_URL:-https://invest-public-api.tinkoff.ru/rest}"
+    account_id: "${TINKOFF_ACCOUNT_ID:-}"
+    account_ids: "${TINKOFF_ACCOUNT_IDS:-}"
+settings:
+  base_currency: "${BASE_CURRENCY:-USD}"
