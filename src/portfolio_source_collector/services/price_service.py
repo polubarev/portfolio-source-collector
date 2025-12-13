@@ -40,6 +40,15 @@ class PriceService:
             return price_map
 
         unresolved = set(candidates)
+        
+        # 1. Try ExchangeRate-API for Fiat (High Priority for RUB/EUR/GBP etc if needed)
+        # Currently focused on RUB as requested
+        if "RUB" in unresolved:
+            fiat_price = self._fetch_exchangerate_api_price("RUB")
+            if fiat_price:
+                price_map["RUB"] = fiat_price
+                unresolved.discard("RUB")
+
         binance_prices = self._fetch_binance_prices(unresolved)
         price_map.update(binance_prices)
         unresolved -= set(binance_prices)
@@ -53,6 +62,36 @@ class PriceService:
             logger.debug("PriceService could not resolve prices for: %s", sorted(unresolved))
 
         return price_map
+
+    def _fetch_exchangerate_api_price(self, symbol: str) -> float | None:
+        """
+        Fetch fiat price against USD from ExchangeRate-API (Open Access).
+        Returns price of 1 unit of 'symbol' in USD.
+        """
+        if symbol != "RUB":
+            return None
+        
+        try:
+            # Open Access endpoint: https://open.er-api.com/v6/latest/USD
+            url = "https://open.er-api.com/v6/latest/USD"
+            response = self._client.get(url)
+            if response.status_code != 200:
+                logger.debug(f"ExchangeRate-API returned {response.status_code}")
+                return None
+            
+            data = response.json()
+            # data["rates"]["RUB"] = how many RUB for 1 USD
+            rates = data.get("rates", {})
+            rate_usd_to_rub = rates.get("RUB")
+            
+            if rate_usd_to_rub and rate_usd_to_rub > 0:
+                price_in_usd = 1.0 / float(rate_usd_to_rub)
+                logger.info(f"Resolved {symbol} price via ExchangeRate-API: {price_in_usd} (Rate: {rate_usd_to_rub})")
+                return price_in_usd
+        except Exception as exc:
+            logger.debug(f"ExchangeRate-API fetch failed for {symbol}: {exc}")
+            
+        return None
 
     def _fetch_binance_prices(self, symbols: set[str]) -> dict[str, float]:
         results: dict[str, float] = {}

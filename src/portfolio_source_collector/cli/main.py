@@ -113,8 +113,16 @@ def balances(
     )
     for broker in brokers:
         typer.echo(f"[{broker.value}]")
+        broker_positions = [p for p in positions_sorted if p.broker == broker]
+        
+        # For Crypto brokers (Binance, Bybit), positions output is a superset of balances.
+        # To avoid duplication, if positions are shown, suppress the balances section.
+        show_balances = True
+        if broker.value in ["binance", "bybit"] and broker_positions:
+            show_balances = False
+
         broker_balances = [b for b in data_sorted if b.broker == broker]
-        if broker_balances:
+        if broker_balances and show_balances:
             typer.echo("  Balances:")
             for balance in broker_balances:
                 usd_value = to_usd(balance.total, balance.currency, fx_rates)
