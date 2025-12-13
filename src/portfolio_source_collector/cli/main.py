@@ -140,6 +140,13 @@ def balances(
         if broker_positions:
             typer.echo("  Positions:")
             for pos in broker_positions:
+                # Attempt to resolve current price if average_price is missing (common for Crypto)
+                if (pos.average_price is None or pos.average_price == 0) and pos.symbol:
+                    found_price = price_map.get(pos.symbol.upper())
+                    if found_price:
+                        pos.average_price = found_price
+                        pos.currency = "USD"
+
                 usd_value = _position_value_usd(pos, fx_rates)
                 if usd_value is None and pos.symbol:
                     price = price_map.get(pos.symbol.upper())
