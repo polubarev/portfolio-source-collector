@@ -11,7 +11,7 @@ def create_http_client(base_url: str | None = None, verify: bool | str = True) -
     Add retry/backoff middleware per broker requirements as implementation evolves.
     """
     return httpx.Client(
-        base_url=base_url,
+        base_url=base_url or "",
         timeout=DEFAULT_TIMEOUT,
         follow_redirects=True,
         verify=verify,

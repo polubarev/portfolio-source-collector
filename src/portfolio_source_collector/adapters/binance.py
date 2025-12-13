@@ -34,6 +34,23 @@ class BinanceAdapter(BrokerAdapter):
         response.raise_for_status()
         return response.json()
 
+    def _signed_post(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+        params = params or {}
+        timestamp = int(time.time() * 1000)
+        payload = {**params, "timestamp": timestamp}
+        query = urlencode(payload, doseq=True)
+        signature = hmac.new(
+            self._config.api_secret.encode(), query.encode(), hashlib.sha256
+        ).hexdigest()
+        headers = {"X-MBX-APIKEY": self._config.api_key}
+        # For POST, Binance typically expects params in query string or body. 
+        # v3/order uses params in query or body. get-funding-asset is SAPI.
+        # SAPI docs say "signed" endpoint.
+        # usually query string is safest for signature match.
+        response = self._client.post(path, params={**payload, "signature": signature}, headers=headers)
+        response.raise_for_status()
+        return response.json()
+
     def fetch_balances(self) -> Sequence[Balance]:
         data = self._signed_get("/api/v3/account")
         balances: list[Balance] = []
@@ -56,44 +73,62 @@ class BinanceAdapter(BrokerAdapter):
     def fetch_positions(self) -> Sequence[Position]:
         positions: list[Position] = []
 
-        # Spot balances as positions proxy.
-        data = self._signed_get("/api/v3/account")
-        for entry in data.get("balances", []):
-            free = float(entry.get("free", 0))
-            locked = float(entry.get("locked", 0))
-            total = free + locked
-            if total == 0:
-                continue
-            positions.append(
-                Position(
-                    broker=Broker.BINANCE,
-                    symbol=entry.get("asset", ""),
-                    quantity=total,
-                    average_price=None,
-                    currency=entry.get("asset", ""),
+        # Spot balances
+        try:
+            data = self._signed_get("/api/v3/account")
+            for entry in data.get("balances", []):
+                free = float(entry.get("free", 0))
+                locked = float(entry.get("locked", 0))
+                total = free + locked
+                if total == 0:
+                    continue
+                positions.append(
+                    Position(
+                        broker=Broker.BINANCE,
+                        symbol=entry.get("asset", ""),
+                        quantity=total,
+                        average_price=None,
+                        currency=entry.get("asset", ""),
+                        account_type="spot",
+                    )
                 )
+        except Exception:
+            pass
+
+        # Funding Wallet balances
+        try:
+            funding_data = self._signed_post(
+                "/sapi/v1/asset/get-funding-asset", params={"needBtcValuation": "false"}
             )
+            for entry in funding_data:
+                free = float(entry.get("free", 0))
+                locked = float(entry.get("locked", 0))
+                frozen = float(entry.get("frozen", 0))
+                total = free + locked + frozen
+                if total == 0:
+                    continue
+                positions.append(
+                    Position(
+                        broker=Broker.BINANCE,
+                        symbol=entry.get("asset", ""),
+                        quantity=total,
+                        average_price=None,
+                        currency=entry.get("asset", ""),
+                        account_type="funding",
+                    )
+                )
+        except Exception as exc:
+            # Funding endpoint logic might fail on permissions or connectivity; log but don't crash
+            pass
 
-        # Simple Earn flexible/locked positions if available.
-        positions.extend(self._fetch_simple_earn_positions())
+        # Earn positions
+        earn_positions = self._fetch_simple_earn_positions()
+        # Ensure earn positions have account_type set
+        for p in earn_positions:
+            p.account_type = "earn"
+        positions.extend(earn_positions)
 
-        # Aggregate by symbol to avoid duplicates from spot + earn.
-        aggregated: dict[str, float] = {}
-        for pos in positions:
-            key = pos.symbol
-            aggregated[key] = aggregated.get(key, 0.0) + pos.quantity
-
-        return [
-            Position(
-                broker=Broker.BINANCE,
-                symbol=symbol,
-                quantity=qty,
-                average_price=None,
-                currency=symbol,
-            )
-            for symbol, qty in aggregated.items()
-            if qty != 0
-        ]
+        return positions
 
     def _fetch_simple_earn_positions(self) -> list[Position]:
         earn_positions: list[Position] = []

@@ -18,6 +18,9 @@ class Balance(BaseModel):
     currency: str = Field(description="ISO currency code, e.g., USD")
     available: float = Field(description="Available amount for trading")
     total: float = Field(description="Total amount including locked funds")
+    account_type: Optional[str] = Field(
+        default=None, description="Optional broker-specific account type label."
+    )
 
 
 class Position(BaseModel):
@@ -26,4 +29,6 @@ class Position(BaseModel):
     quantity: float
     average_price: Optional[float] = None
     currency: Optional[str] = None
-
+    account_type: Optional[str] = Field(
+        default=None, description="Optional broker-specific account type label."
+    )
