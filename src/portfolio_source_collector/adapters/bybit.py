@@ -72,7 +72,7 @@ class BybitAdapter(BrokerAdapter):
         """
         try:
             data = self._get(
-                "/v5/asset/transfer/query-account-coin-balance",
+                "/v5/asset/transfer/query-account-coins-balance",
                 params={"accountType": account_type},
             )
         except Exception as exc:  # pragma: no cover - network/permission error

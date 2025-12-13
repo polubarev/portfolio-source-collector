@@ -31,7 +31,7 @@ def test_bybit_balances_split_by_account_types(monkeypatch) -> None:
                         ]
                     }
                 }
-        if "query-account-coin-balance" in path:
+        if "query-account-coins-balance" in path:
             acct = params.get("accountType")
             if acct == "FUND":
                 return {"result": {"balance": [{"coin": "USDT", "transferBalance": "2"}]}}
@@ -75,14 +75,15 @@ def test_bybit_positions_fetch_all_types(monkeypatch) -> None:
                 }
             }
 
-        if "transfer/query-account-coin-balance" in path:
-            if account == "FUND":
-                return {
-                    "result": {
-                        "balance": [{"coin": "USDC", "walletBalance": "50"}]
-                    }
+        if "query-account-coins-balance" in path:
+             return {
+                "result": {
+                    "balance": [
+                        {"coin": "USDT", "walletBalance": "50"},
+                        {"coin": "USDC", "walletBalance": "0"}
+                    ]
                 }
-        
+            }     
         return {}
 
     monkeypatch.setattr(adapter, "_get", fake_get)
