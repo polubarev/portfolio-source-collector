@@ -26,7 +26,7 @@ Fetch balances across multiple brokers (Tinkoff Investments, Bybit, Binance, Int
    - `IBKR_HOST` (default `127.0.0.1`), `IBKR_PORT` (e.g., `7497` for paper), `IBKR_CLIENT_ID`, optional `IBKR_ACCOUNT_ID`/`IBKR_ACCOUNT_IDS` (IB socket API), `IBKR_API_PATH` if ibapi isn’t installed system-wide.
 4. Run the CLI:
    ```bash
-   portfolio-balances --help
+   portfolio-balances --show-positions
    ```
 
 ### Interactive Brokers (ibapi) setup

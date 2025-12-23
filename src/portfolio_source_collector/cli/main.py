@@ -64,8 +64,11 @@ def balances(
         ):
             symbols_for_prices.add(balance.currency)
     for pos in positions:
-        if _position_value_usd(pos, fx_rates) is None and pos.symbol:
-            symbols_for_prices.add(pos.symbol)
+        if _position_value_usd(pos, fx_rates) is None:
+            if pos.currency and not is_stable(pos.currency):
+                symbols_for_prices.add(pos.currency)
+            if pos.symbol:
+                symbols_for_prices.add(pos.symbol)
     price_map = price_service.fetch_usd_prices(symbols_for_prices)
     
     # Inject resolved prices for currencies into fx_rates so to_usd() works
